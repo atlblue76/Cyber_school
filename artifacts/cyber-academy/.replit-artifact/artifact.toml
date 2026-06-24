@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "CyberBuild Academy"
+version = "1.0.0"
+id = "artifacts/cyber-academy"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21092
+
+[services.development]
+run = "pnpm --filter @workspace/cyber-academy run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cyber-academy", "run", "build" ]
+publicDir = "artifacts/cyber-academy/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21092"
+BASE_PATH = "/"

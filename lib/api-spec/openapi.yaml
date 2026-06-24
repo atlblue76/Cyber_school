@@ -10,6 +10,18 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: dashboard
+    description: Learner dashboard and progress overview
+  - name: modules
+    description: Company-building learning phases (modules)
+  - name: lessons
+    description: Individual lessons within a module
+  - name: quizzes
+    description: Lesson knowledge checks
+  - name: exams
+    description: Certification practice exams (Security+, CySA+)
+  - name: attempts
+    description: Quiz and exam attempt history
 paths:
   /healthz:
     get:
@@ -24,6 +36,235 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Learner dashboard
+      description: Overall progress, certification readiness, current phase and recent activity
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+
+  /modules:
+    get:
+      operationId: listModules
+      tags: [modules]
+      summary: List all learning phases
+      description: The ordered company-building phases with per-module progress
+      responses:
+        "200":
+          description: List of modules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Module"
+
+  /modules/{moduleId}:
+    get:
+      operationId: getModule
+      tags: [modules]
+      summary: Get a module with its lessons
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Module detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModuleDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /lessons/{lessonId}:
+    get:
+      operationId: getLesson
+      tags: [lessons]
+      summary: Get a lesson with content and knowledge-check questions
+      parameters:
+        - name: lessonId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lesson detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /lessons/{lessonId}/complete:
+    post:
+      operationId: completeLesson
+      tags: [lessons]
+      summary: Mark a lesson complete or incomplete
+      parameters:
+        - name: lessonId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LessonCompletionInput"
+      responses:
+        "200":
+          description: Updated lesson progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonProgress"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /quizzes/{lessonId}/submit:
+    post:
+      operationId: submitQuiz
+      tags: [quizzes]
+      summary: Submit answers for a lesson knowledge check
+      parameters:
+        - name: lessonId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptInput"
+      responses:
+        "200":
+          description: Graded attempt result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /exams:
+    get:
+      operationId: listExams
+      tags: [exams]
+      summary: List certification practice exams
+      responses:
+        "200":
+          description: List of exams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Exam"
+
+  /exams/{examId}:
+    get:
+      operationId: getExam
+      tags: [exams]
+      summary: Get a practice exam with its questions
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Exam detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /exams/{examId}/submit:
+    post:
+      operationId: submitExam
+      tags: [exams]
+      summary: Submit answers for a practice exam
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttemptInput"
+      responses:
+        "200":
+          description: Graded exam result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttemptResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /attempts:
+    get:
+      operationId: listAttempts
+      tags: [attempts]
+      summary: Recent quiz and exam attempts
+      responses:
+        "200":
+          description: Attempt history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Attempt"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +275,483 @@ components:
       required:
         - status
 
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    Module:
+      type: object
+      required:
+        - id
+        - slug
+        - order
+        - phase
+        - title
+        - subtitle
+        - description
+        - icon
+        - accentColor
+        - estimatedHours
+        - certTags
+        - lessonCount
+        - completedLessons
+        - progressPct
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        order:
+          type: integer
+        phase:
+          type: string
+          description: Short company-building phase label, e.g. "Phase 01"
+        title:
+          type: string
+        subtitle:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+          description: Icon identifier (lucide icon name) for the module
+        accentColor:
+          type: string
+          description: Suggested accent token/hex for the module
+        estimatedHours:
+          type: number
+        certTags:
+          type: array
+          items:
+            type: string
+          description: Related certifications, e.g. "Security+", "CySA+"
+        lessonCount:
+          type: integer
+        completedLessons:
+          type: integer
+        progressPct:
+          type: integer
+
+    ModuleDetail:
+      type: object
+      required:
+        - id
+        - slug
+        - order
+        - phase
+        - title
+        - subtitle
+        - description
+        - icon
+        - accentColor
+        - estimatedHours
+        - certTags
+        - objectives
+        - scenario
+        - lessons
+        - progressPct
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        order:
+          type: integer
+        phase:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        accentColor:
+          type: string
+        estimatedHours:
+          type: number
+        certTags:
+          type: array
+          items:
+            type: string
+        objectives:
+          type: array
+          items:
+            type: string
+          description: What the learner will be able to do after this phase
+        scenario:
+          type: string
+          description: The company-building narrative framing for this phase
+        progressPct:
+          type: integer
+        lessons:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonSummary"
+
+    LessonSummary:
+      type: object
+      required:
+        - id
+        - moduleId
+        - order
+        - title
+        - summary
+        - estimatedMinutes
+        - questionCount
+        - completed
+      properties:
+        id:
+          type: integer
+        moduleId:
+          type: integer
+        order:
+          type: integer
+        title:
+          type: string
+        summary:
+          type: string
+        estimatedMinutes:
+          type: integer
+        questionCount:
+          type: integer
+        completed:
+          type: boolean
+
+    LessonDetail:
+      type: object
+      required:
+        - id
+        - moduleId
+        - moduleTitle
+        - modulePhase
+        - order
+        - title
+        - summary
+        - content
+        - estimatedMinutes
+        - objectives
+        - completed
+        - questions
+        - prevLessonId
+        - nextLessonId
+      properties:
+        id:
+          type: integer
+        moduleId:
+          type: integer
+        moduleTitle:
+          type: string
+        modulePhase:
+          type: string
+        order:
+          type: integer
+        title:
+          type: string
+        summary:
+          type: string
+        content:
+          type: string
+          description: Lesson body in Markdown
+        estimatedMinutes:
+          type: integer
+        objectives:
+          type: array
+          items:
+            type: string
+        completed:
+          type: boolean
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+        prevLessonId:
+          type: ["integer", "null"]
+        nextLessonId:
+          type: ["integer", "null"]
+
+    Question:
+      type: object
+      required:
+        - id
+        - prompt
+        - options
+        - correctIndex
+        - explanation
+      properties:
+        id:
+          type: integer
+        prompt:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctIndex:
+          type: integer
+        explanation:
+          type: string
+
+    LessonCompletionInput:
+      type: object
+      required:
+        - completed
+      properties:
+        completed:
+          type: boolean
+
+    LessonProgress:
+      type: object
+      required:
+        - lessonId
+        - completed
+      properties:
+        lessonId:
+          type: integer
+        completed:
+          type: boolean
+
+    AttemptInput:
+      type: object
+      required:
+        - answers
+      properties:
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnswerInput"
+
+    AnswerInput:
+      type: object
+      required:
+        - questionId
+        - selectedIndex
+      properties:
+        questionId:
+          type: integer
+        selectedIndex:
+          type: integer
+
+    AnswerResult:
+      type: object
+      required:
+        - questionId
+        - selectedIndex
+        - correctIndex
+        - isCorrect
+        - explanation
+      properties:
+        questionId:
+          type: integer
+        selectedIndex:
+          type: integer
+        correctIndex:
+          type: integer
+        isCorrect:
+          type: boolean
+        explanation:
+          type: string
+
+    AttemptResult:
+      type: object
+      required:
+        - id
+        - kind
+        - refId
+        - title
+        - score
+        - total
+        - percentage
+        - passed
+        - answers
+      properties:
+        id:
+          type: integer
+        kind:
+          type: string
+          description: '"quiz" or "exam"'
+        refId:
+          type: integer
+          description: Lesson id for quizzes, exam id for exams
+        title:
+          type: string
+        score:
+          type: integer
+        total:
+          type: integer
+        percentage:
+          type: integer
+        passed:
+          type: boolean
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnswerResult"
+
+    Attempt:
+      type: object
+      required:
+        - id
+        - kind
+        - refId
+        - title
+        - score
+        - total
+        - percentage
+        - passed
+        - createdAt
+      properties:
+        id:
+          type: integer
+        kind:
+          type: string
+        refId:
+          type: integer
+        title:
+          type: string
+        score:
+          type: integer
+        total:
+          type: integer
+        percentage:
+          type: integer
+        passed:
+          type: boolean
+        createdAt:
+          type: string
+
+    Exam:
+      type: object
+      required:
+        - id
+        - slug
+        - cert
+        - title
+        - description
+        - icon
+        - accentColor
+        - questionCount
+        - passPercentage
+        - bestPercentage
+        - attemptsTaken
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        cert:
+          type: string
+          description: 'Certification, e.g. "Security+" or "CySA+"'
+        title:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        accentColor:
+          type: string
+        questionCount:
+          type: integer
+        passPercentage:
+          type: integer
+        bestPercentage:
+          type: ["integer", "null"]
+        attemptsTaken:
+          type: integer
+
+    ExamDetail:
+      type: object
+      required:
+        - id
+        - slug
+        - cert
+        - title
+        - description
+        - icon
+        - accentColor
+        - passPercentage
+        - timeLimitMinutes
+        - questions
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        cert:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        accentColor:
+          type: string
+        passPercentage:
+          type: integer
+        timeLimitMinutes:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+
+    Dashboard:
+      type: object
+      required:
+        - totalModules
+        - completedModules
+        - totalLessons
+        - completedLessons
+        - overallProgressPct
+        - currentPhaseTitle
+        - currentModuleId
+        - nextLessonId
+        - certReadiness
+        - recentAttempts
+      properties:
+        totalModules:
+          type: integer
+        completedModules:
+          type: integer
+        totalLessons:
+          type: integer
+        completedLessons:
+          type: integer
+        overallProgressPct:
+          type: integer
+        currentPhaseTitle:
+          type: string
+        currentModuleId:
+          type: ["integer", "null"]
+        nextLessonId:
+          type: ["integer", "null"]
+        certReadiness:
+          type: array
+          items:
+            $ref: "#/components/schemas/CertReadiness"
+        recentAttempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attempt"
+
+    CertReadiness:
+      type: object
+      required:
+        - cert
+        - readinessPct
+        - bestExamPct
+        - examsTaken
+      properties:
+        cert:
+          type: string
+        readinessPct:
+          type: integer
+        bestExamPct:
+          type: ["integer", "null"]
+        examsTaken:
+          type: integer
